@@ -191,7 +191,7 @@ func main() {
 func newBackends(errorChan chan<- error) []backend {
 	backends := make([]backend, 10)
 
-	for i, _ := range backends {
+	for i := range backends {
 		serveMux := http.NewServeMux()
 		serveMux.HandleFunc("/", unreliableHandler(rand.Intn(5)+1))
 		server := newServer(serveMux)
@@ -268,7 +268,7 @@ func mainHandler(backends []backend) http.HandlerFunc {
 		wg.Wait()
 
 		values := make([]KeyValue, len(backends))
-		for i, _ := range values {
+		for i := range values {
 			values[i] = <-results
 		}
 

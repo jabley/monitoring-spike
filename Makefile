@@ -6,6 +6,10 @@ build: -imports
 -imports:
 	goimports -w .
 
+lint:
+	golint .
+	go vet .
+
 dockerise:
 	docker build -t jabley/monitoring-spike-builder -f Dockerfile.build .
 	docker run --rm jabley/monitoring-spike-builder | docker build -t jabley/monitoring-spike -f Dockerfile.run -
