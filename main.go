@@ -215,7 +215,7 @@ func newBackends(errorChan chan<- error) []backend {
 }
 
 func newListener(port string) (net.Listener, error) {
-	return net.Listen("tcp", "127.0.0.1:"+port)
+	return net.Listen("tcp", "0.0.0.0:"+port)
 }
 
 func newServer(serveMux http.Handler) *http.Server {
