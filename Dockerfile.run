@@ -1,0 +1,5 @@
+FROM joeshaw/busybox-nonroot
+EXPOSE 8080
+USER nobody
+COPY monitoring-spike /bin/monitoring-spike
+CMD ["/bin/monitoring-spike"]
