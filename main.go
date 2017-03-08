@@ -115,6 +115,7 @@ const (
 type backend struct {
 	server  *http.Server
 	address string
+	name    string
 }
 
 // KeyValue makes the ENV vars into a first-class data structure
@@ -127,7 +128,19 @@ type KeyValue struct {
 type KeyValues []*KeyValue
 
 var (
-	tmpl = template.Must(template.New("index.html").Parse(indexHTML))
+	tmpl                = template.Must(template.New("index.html").Parse(indexHTML))
+	backendServiceNames = []string{
+		"Navigation",
+		"Content",
+		"Search",
+		"Product",
+		"Price",
+		"Shipping",
+		"Identity",
+		"Customer",
+		"Basket",
+		"Order",
+	}
 )
 
 func main() {
@@ -199,10 +212,16 @@ func newBackends(errorChan chan<- error) []backend {
 		backends[i] = backend{
 			server:  server,
 			address: listener.Addr().String(),
+			name:    backendName(i),
 		}
 	}
 
 	return backends
+}
+
+func backendName(i int) string {
+	nameLen := len(backendServiceNames)
+	return fmt.Sprintf("%s_%d", backendServiceNames[i%nameLen], i%nameLen)
 }
 
 func newListener(port string) (net.Listener, error) {
@@ -238,22 +257,22 @@ func mainHandler(backends []backend) http.HandlerFunc {
 		for _, b := range backends {
 			wg.Add(1)
 
-			go func(address string, results chan<- KeyValue) {
+			go func(b backend, results chan<- KeyValue) {
 				defer wg.Done()
 
-				fmt.Printf("Sending request to backend %s\n", address)
+				fmt.Printf("Sending request to backend %s\n", b.name)
 
-				res, err := client.Get("http://" + address)
+				res, err := client.Get("http://" + b.address)
 
-				fmt.Printf("Received response from backend %s\n", address)
+				fmt.Printf("Received response from backend %s\n", b.name)
 
 				if err != nil {
-					results <- KeyValue{address, err.Error()}
+					results <- KeyValue{b.name, err.Error()}
 				} else {
 					defer res.Body.Close()
-					results <- KeyValue{address, res.Status}
+					results <- KeyValue{b.name, res.Status}
 				}
-			}(b.address, results)
+			}(b, results)
 		}
 
 		wg.Wait()
