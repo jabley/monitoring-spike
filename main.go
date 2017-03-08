@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
@@ -129,20 +128,12 @@ type KeyValues []*KeyValue
 
 var (
 	tmpl = template.Must(template.New("index.html").Parse(indexHTML))
-	body []byte
 )
 
 func main() {
 	flag.Parse()
 
 	port := getDefaultConfig("PORT", "8080")
-
-	values := getKeyValues()
-	var b bytes.Buffer
-	if err := tmpl.Execute(&b, values); err != nil {
-		panic(err)
-	}
-	body = b.Bytes()
 
 	errorChan := make(chan error, 1)
 
