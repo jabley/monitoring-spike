@@ -16,7 +16,20 @@ import (
 
 type key int
 
-const requestIDKey key = 0
+const (
+	requestIDKey key = 0
+
+	navigationService = "Navigation"
+	contentService    = "Content"
+	searchService     = "Search"
+	productService    = "Product"
+	priceService      = "Price"
+	shipppingService  = "Shipping"
+	identityService   = "Identity"
+	customerService   = "Customer"
+	basketService     = "Basket"
+	orderService      = "Order"
+)
 
 const (
 	indexHTML = `<!DOCTYPE html>
@@ -129,16 +142,89 @@ type KeyValues []*KeyValue
 var (
 	tmpl                = template.Must(template.New("index.html").Parse(indexHTML))
 	backendServiceNames = []string{
-		"Navigation",
-		"Content",
-		"Search",
-		"Product",
-		"Price",
-		"Shipping",
-		"Identity",
-		"Customer",
-		"Basket",
-		"Order",
+		navigationService,
+		contentService,
+		searchService,
+		productService,
+		priceService,
+		shipppingService,
+		identityService,
+		customerService,
+		basketService,
+		orderService,
+	}
+
+	homePageServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		basketService:     true,
+	}
+	productListingServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		basketService:     true,
+	}
+	productDetailServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		basketService:     true,
+	}
+	categoryListingServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		basketService:     true,
+	}
+	categoryDetailServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		basketService:     true,
+	}
+	searchServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		identityService:   true,
+	}
+	accountServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		identityService:   true,
+	}
+	checkoutServices = map[string]bool{
+		navigationService: true,
+		contentService:    true,
+		searchService:     true,
+		productService:    true,
+		priceService:      true,
+		customerService:   true,
+		basketService:     true,
 	}
 )
 

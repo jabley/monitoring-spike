@@ -9,12 +9,34 @@ import (
 )
 
 func newMainServer(backends []backend) *http.Server {
-	serveMux := http.NewServeMux()
+	tr := &http.Transport{
+		ResponseHeaderTimeout: 2 * time.Second,
+	}
+	client := &http.Client{Transport: tr}
 
-	serveMux.Handle("/", requestID(instrument(serviceTime(mainHandler(backends)))))
-	serveMux.Handle("/_status", statusHandler())
+	serveMux := http.NewServeMux()
+	serveMux.Handle("/", requestID(instrument(serviceTime(mainHandler(client, filterBackends(backends, homePageServices))))))
+	serveMux.Handle("/products", requestID(instrument(serviceTime(productListing(client, filterBackends(backends, productListingServices))))))
+	serveMux.Handle("/products/", requestID(instrument(serviceTime(productDetail(client, filterBackends(backends, productDetailServices))))))
+	serveMux.Handle("/categories", requestID(instrument(serviceTime(categoryListing(client, filterBackends(backends, categoryListingServices))))))
+	serveMux.Handle("/categories/", requestID(instrument(serviceTime(categoryDetail(client, filterBackends(backends, categoryDetailServices))))))
+	serveMux.Handle("/search", requestID(instrument(serviceTime(search(client, filterBackends(backends, searchServices))))))
+	serveMux.Handle("/account", requestID(instrument(serviceTime(account(client, filterBackends(backends, accountServices))))))
+	serveMux.Handle("/checkout", requestID(instrument(serviceTime(checkout(client, filterBackends(backends, checkoutServices))))))
 
 	return newServer(serveMux)
+}
+
+func filterBackends(backends []backend, desired map[string]bool) []backend {
+	res := make([]backend, 0)
+
+	for _, b := range backends {
+		if _, ok := desired[b.name]; ok {
+			res = append(res, b)
+		}
+	}
+
+	return res
 }
 
 func newBackends(errorChan chan<- error) []backend {
@@ -46,7 +68,7 @@ func newBackends(errorChan chan<- error) []backend {
 
 func backendName(i int) string {
 	nameLen := len(backendServiceNames)
-	return fmt.Sprintf("%s_%d", backendServiceNames[i%nameLen], i%nameLen)
+	return fmt.Sprintf("%s", backendServiceNames[i%nameLen])
 }
 
 func newListener(port string) (net.Listener, error) {
