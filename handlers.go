@@ -56,6 +56,11 @@ func mainHandler(client *http.Client, backends []backend) http.Handler {
 	})
 }
 
+// measureResponse handles [logging|generating an event for] the response time of a given backend
+func measureResponse(r *http.Request, path string, b backend, duration time.Duration) {
+	// TOOD(jabley): appropriately handle this for each metrics collection service
+}
+
 func process(client *http.Client, path string, backends []backend, rw http.ResponseWriter, r *http.Request) {
 	results := make(chan KeyValue, len(backends))
 
@@ -66,9 +71,8 @@ func process(client *http.Client, path string, backends []backend, rw http.Respo
 
 		go func(b backend, results chan<- KeyValue) {
 			defer wg.Done()
-			// TODO(jabley): capture the response time
-			// start := time.Now()
-			// defer doSomething(b, time.Since(start))
+			start := time.Now()
+			defer measureResponse(r, path, b, time.Since(start))
 			fetch(client, path, b, results)
 		}(b, results)
 	}
