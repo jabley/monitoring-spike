@@ -89,7 +89,8 @@ func process(client *http.Client, path string, backends []backend, rw http.Respo
 }
 
 func fetch(client *http.Client, path string, b backend, results chan<- KeyValue) {
-	res, err := client.Get("http://" + b.address + path)
+	URL := "http://" + b.address + path
+	res, err := client.Get(URL)
 
 	if err != nil {
 		results <- KeyValue{b.name, err.Error()}
@@ -142,14 +143,34 @@ func checkout(client *http.Client, backends []backend) http.Handler {
 }
 
 func hash(s string) string {
+	return fmt.Sprintf("%d", hashAsUint(s))
+}
+
+func hashAsUint(s string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(s))
-	return fmt.Sprintf("%s", h.Sum32())
+	return h.Sum32()
+}
+
+// predictableResponseTime gives a broadly similar response time for a given URL.
+// This is used to fake the processing time to talk to a database, etc.
+// For a given set of URLs, we want predictable behaviour. This is to show that
+// certain customers / etc are slow. We should be able to see in a monitoring
+// that requests for certain resources are slow.
+func predictableResponseTime(r *http.Request) {
+	crc := hashAsUint(r.URL.Path)
+	if crc%5 == 0 {
+		// perturb the response time for this one in a repeatable fashion
+		time.Sleep(time.Duration(rand.Intn(200)+200) * time.Millisecond)
+	}
+
+	// This is our fake normal service time
+	time.Sleep(time.Duration(time.Duration(rand.Intn(20)) * time.Millisecond))
 }
 
 func unreliableHandler(percentageFailures int) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		time.Sleep(time.Duration(rand.Intn(200)) * time.Millisecond)
+		predictableResponseTime(r)
 		if rand.Intn(100) < percentageFailures {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write([]byte(`{
