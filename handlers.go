@@ -57,8 +57,6 @@ func mainHandler(client *http.Client, backends []backend) http.Handler {
 }
 
 func process(client *http.Client, path string, backends []backend, rw http.ResponseWriter, r *http.Request) {
-	fmt.Printf("Frontend received request\n")
-
 	results := make(chan KeyValue, len(backends))
 
 	var wg sync.WaitGroup
@@ -91,11 +89,7 @@ func process(client *http.Client, path string, backends []backend, rw http.Respo
 }
 
 func fetch(client *http.Client, path string, b backend, results chan<- KeyValue) {
-	fmt.Printf("Sending request to backend %s\n", b.name)
-
 	res, err := client.Get("http://" + b.address + path)
-
-	fmt.Printf("Received response from backend %s\n", b.name)
 
 	if err != nil {
 		results <- KeyValue{b.name, err.Error()}
@@ -155,8 +149,7 @@ func hash(s string) string {
 
 func unreliableHandler(percentageFailures int) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		fmt.Printf("Backend received request\n")
-
+		time.Sleep(time.Duration(rand.Intn(200)) * time.Millisecond)
 		if rand.Intn(100) < percentageFailures {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write([]byte(`{
