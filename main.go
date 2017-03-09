@@ -18,6 +18,10 @@ import (
 	"time"
 )
 
+type key int
+
+const requestIDKey key = 0
+
 const (
 	indexHTML = `<!DOCTYPE html>
 <html>
@@ -190,8 +194,8 @@ func listenAndServe(port string, server *http.Server, errorChan chan<- error) {
 func newMainServer(backends []backend) *http.Server {
 	serveMux := http.NewServeMux()
 
-	serveMux.HandleFunc("/", mainHandler(backends))
-	serveMux.HandleFunc("/_status", statusHandler)
+	serveMux.Handle("/", requestID(mainHandler(backends)))
+	serveMux.Handle("/_status", statusHandler())
 
 	return newServer(serveMux)
 }
@@ -201,7 +205,7 @@ func newBackends(errorChan chan<- error) []backend {
 
 	for i := range backends {
 		serveMux := http.NewServeMux()
-		serveMux.HandleFunc("/", unreliableHandler(rand.Intn(5)+1))
+		serveMux.Handle("/", unreliableHandler(rand.Intn(5)+1))
 		server := newServer(serveMux)
 		listener, err := newListener("0")
 
@@ -248,10 +252,41 @@ func getDefaultConfig(name, fallback string) string {
 	return fallback
 }
 
-func mainHandler(backends []backend) http.HandlerFunc {
-	client := &http.Client{}
+func requestID(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		ctx := newContextWithRequestID(r.Context(), r)
+		next.ServeHTTP(rw, r.WithContext(ctx))
+	})
+}
 
-	return func(w http.ResponseWriter, r *http.Request) {
+func newContextWithRequestID(ctx context.Context, r *http.Request) context.Context {
+	reqID := r.Header.Get("X-Request-ID")
+	if reqID == "" {
+		reqID = generateRandomID()
+	}
+
+	return context.WithValue(ctx, requestIDKey, reqID)
+}
+
+func generateRandomID() string {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	// Horrible magic numbers due to UUID spec in RFC4122
+	b[6] = (b[6] & 0xF) | (byte(4) << 4)
+	b[8] = (b[8] | 0x40) & 0x7F
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+func mainHandler(backends []backend) http.Handler {
+	tr := &http.Transport{
+		ResponseHeaderTimeout: 2 * time.Second,
+	}
+	client := &http.Client{Transport: tr}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Frontend received request\n")
 
 		results := make(chan KeyValue, len(backends))
@@ -301,17 +336,20 @@ func fetch(client *http.Client, b backend, results chan<- KeyValue) {
 	}
 }
 
-func statusHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "private, no-cache, no-store, must-revalidate")
-	w.WriteHeader(http.StatusOK)
-	var mem runtime.MemStats
-	runtime.ReadMemStats(&mem)
-	json.NewEncoder(w).Encode(mem)
+func statusHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "private, no-cache, no-store, must-revalidate")
+		w.WriteHeader(http.StatusOK)
+		var mem runtime.MemStats
+		runtime.ReadMemStats(&mem)
+		json.NewEncoder(w).Encode(mem)
+	})
 }
 
-func unreliableHandler(percentageFailures int) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func unreliableHandler(percentageFailures int) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Backend received request\n")
 
 		if rand.Intn(100) < percentageFailures {
@@ -357,5 +395,5 @@ func unreliableHandler(percentageFailures int) http.HandlerFunc {
   ]
 }`))
 		}
-	}
+	})
 }
