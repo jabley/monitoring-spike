@@ -28,7 +28,7 @@ func newMainServer(backends []backend) *http.Server {
 }
 
 func filterBackends(backends []backend, desired map[string]bool) []backend {
-	res := make([]backend, 0)
+	var res []backend
 
 	for _, b := range backends {
 		if _, ok := desired[b.name]; ok {
