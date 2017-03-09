@@ -1,6 +1,6 @@
 FROM golang:alpine
 RUN mkdir /app
-ADD Dockerfile.run main.go /app/
+ADD Dockerfile.run *.go /app/
 WORKDIR /app
 RUN env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o monitoring-spike .
 # Output a tarball which can be piped into `docker build -f Dockerfile.run -`
