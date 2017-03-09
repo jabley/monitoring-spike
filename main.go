@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -348,16 +347,4 @@ func unreliableHandler(percentageFailures int) http.HandlerFunc {
 }`))
 		}
 	}
-}
-
-func getKeyValues() KeyValues {
-	result := make(KeyValues, 2)
-	result[0] = &KeyValue{"PORT", os.Getenv("PORT")}
-	result[1] = &KeyValue{"PROVIDER", os.Getenv("PROVIDER")}
-	return result
-}
-
-func newKeyValue(kv string) *KeyValue {
-	s := strings.Split(kv, "=")
-	return &KeyValue{Key: s[0], Value: s[1]}
 }
