@@ -3,7 +3,13 @@
 build: -imports
 	go build -o monitoring-spike .
 
--imports:
+build-linux: -imports
+	env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o monitoring-spike
+
+-deps:
+	go get golang.org/x/tools/cmd/goimports
+
+-imports: -deps
 	goimports -w .
 
 lint:

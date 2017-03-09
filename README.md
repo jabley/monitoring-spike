@@ -21,3 +21,33 @@ doing that, it should capture:
 - It uses Make for building things. That might be handy
 - [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) is used to format and rearrange imports – `go get golang.org/x/tools/cmd/goimports`
 - [vegeta](https://github.com/tsenart/vegeta) is used for sending a load of traffic to the server – `brew install vegeta` or similar
+
+## Running it
+
+You'll want to run the server, and throw some traffic at it so that some metrics
+are created in the system you're playing with.
+
+### Running the server
+
+You'll need to run the server. You can do this in a couple of ways:
+
+1. Using Go:
+```sh
+$ make
+$ env FOO=your-api-key ./monitoring-spike &
+```
+
+1. Using Docker
+```sh
+$ make dockerise
+$ docker run -p 8080:8080 -e FOO=your-api-key -itd jabley/monitoring-spike
+```
+
+### Generating some load
+
+```sh
+$ make report
+```
+
+This will run `vegeta` and hopefully create some metrics in the system that
+you're evaluating.
