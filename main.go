@@ -194,7 +194,7 @@ func listenAndServe(port string, server *http.Server, errorChan chan<- error) {
 func newMainServer(backends []backend) *http.Server {
 	serveMux := http.NewServeMux()
 
-	serveMux.Handle("/", requestID(mainHandler(backends)))
+	serveMux.Handle("/", requestID(instrument(serviceTime(mainHandler(backends)))))
 	serveMux.Handle("/_status", statusHandler())
 
 	return newServer(serveMux)
@@ -205,7 +205,7 @@ func newBackends(errorChan chan<- error) []backend {
 
 	for i := range backends {
 		serveMux := http.NewServeMux()
-		serveMux.Handle("/", unreliableHandler(rand.Intn(5)+1))
+		serveMux.Handle("/", requestID(instrument(serviceTime(unreliableHandler(rand.Intn(5)+1)))))
 		server := newServer(serveMux)
 		listener, err := newListener("0")
 
@@ -278,6 +278,30 @@ func generateRandomID() string {
 	b[6] = (b[6] & 0xF) | (byte(4) << 4)
 	b[8] = (b[8] | 0x40) & 0x7F
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+func serviceTime(next http.Handler) http.Handler {
+	record := func(r *http.Request, duration time.Duration) {
+		// TODO(jabley): send data to a metrics gathering service
+	}
+
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		defer record(r, time.Now().Sub(start))
+		next.ServeHTTP(rw, r)
+	})
+}
+
+func instrument(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		ctx := newInstrumentedContext(r.Context())
+		next.ServeHTTP(rw, r.WithContext(ctx))
+	})
+}
+
+func newInstrumentedContext(ctx context.Context) context.Context {
+	// TODO(jabley): add metrics gathering objects to the request context.
+	return ctx
 }
 
 func mainHandler(backends []backend) http.Handler {
