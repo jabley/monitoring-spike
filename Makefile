@@ -1,10 +1,13 @@
-.PHONY: build dockerise lint attack report
+.PHONY: build build-linux clean dockerise lint attack report
 
 build: -imports
 	go build -o monitoring-spike .
 
 build-linux: -imports
 	env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o monitoring-spike
+
+clean:
+	rm monitoring-spike
 
 -deps:
 	go get golang.org/x/tools/cmd/goimports
