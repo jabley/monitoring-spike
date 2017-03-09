@@ -151,25 +151,12 @@ func main() {
 
 	backends := newBackends(errorChan)
 
-	serveMux := http.NewServeMux()
-
-	serveMux.HandleFunc("/", mainHandler(backends))
-	serveMux.HandleFunc("/_status", statusHandler)
-
-	srv := newServer(serveMux)
+	srv := newMainServer(backends)
 
 	signalChan := make(chan os.Signal, 1)
-
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-	go func() {
-		listener, err := newListener(port)
-		if err != nil {
-			errorChan <- err
-			return
-		}
-		errorChan <- srv.Serve(listener)
-	}()
+	go listenAndServe(port, srv, errorChan)
 
 	for {
 		select {
@@ -189,6 +176,24 @@ func main() {
 			os.Exit(0)
 		}
 	}
+}
+
+func listenAndServe(port string, server *http.Server, errorChan chan<- error) {
+	listener, err := newListener(port)
+	if err != nil {
+		errorChan <- err
+		return
+	}
+	errorChan <- server.Serve(listener)
+}
+
+func newMainServer(backends []backend) *http.Server {
+	serveMux := http.NewServeMux()
+
+	serveMux.HandleFunc("/", mainHandler(backends))
+	serveMux.HandleFunc("/_status", statusHandler)
+
+	return newServer(serveMux)
 }
 
 func newBackends(errorChan chan<- error) []backend {
