@@ -263,19 +263,10 @@ func mainHandler(backends []backend) http.HandlerFunc {
 
 			go func(b backend, results chan<- KeyValue) {
 				defer wg.Done()
-
-				fmt.Printf("Sending request to backend %s\n", b.name)
-
-				res, err := client.Get("http://" + b.address)
-
-				fmt.Printf("Received response from backend %s\n", b.name)
-
-				if err != nil {
-					results <- KeyValue{b.name, err.Error()}
-				} else {
-					defer res.Body.Close()
-					results <- KeyValue{b.name, res.Status}
-				}
+				// TODO(jabley): capture the response time
+				// start := time.Now()
+				// defer doSomething(b, time.Since(start))
+				fetch(client, b, results)
 			}(b, results)
 		}
 
@@ -292,6 +283,21 @@ func mainHandler(backends []backend) http.HandlerFunc {
 		if err := tmpl.Execute(w, values); err != nil {
 			panic(err)
 		}
+	})
+}
+
+func fetch(client *http.Client, b backend, results chan<- KeyValue) {
+	fmt.Printf("Sending request to backend %s\n", b.name)
+
+	res, err := client.Get("http://" + b.address)
+
+	fmt.Printf("Received response from backend %s\n", b.name)
+
+	if err != nil {
+		results <- KeyValue{b.name, err.Error()}
+	} else {
+		defer res.Body.Close()
+		results <- KeyValue{b.name, res.Status}
 	}
 }
 
