@@ -17,6 +17,7 @@ func requestID(next http.Handler) http.Handler {
 	})
 }
 
+// newContextWithRequestID stores the unique request ID in the request context
 func newContextWithRequestID(ctx context.Context, r *http.Request) context.Context {
 	reqID := r.Header.Get("X-Request-ID")
 	if reqID == "" {
@@ -24,6 +25,11 @@ func newContextWithRequestID(ctx context.Context, r *http.Request) context.Conte
 	}
 
 	return context.WithValue(ctx, requestIDKey, reqID)
+}
+
+// requestIDFromContext returns the unique ID for the current request
+func requestIDFromContext(ctx context.Context) string {
+	return ctx.Value(requestIDKey).(string)
 }
 
 func serviceTime(next http.Handler) http.Handler {
