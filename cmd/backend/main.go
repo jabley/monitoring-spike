@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	libhoney "github.com/honeycombio/libhoney-go"
 	"github.com/jabley/monitoring-spike/pkg/apps"
 	"github.com/jabley/monitoring-spike/pkg/servers"
 )
@@ -16,6 +17,20 @@ import (
 func main() {
 	name := apps.GetDefaultConfig("NAME", "")
 	port := apps.GetDefaultConfig("PORT", "")
+	honeyWriteKey := apps.GetDefaultConfig("HONEY_KEY", "")
+
+	if honeyWriteKey == "" {
+		fmt.Fprintf(os.Stderr, "HONEY_KEY environment variable not set to your honeycomb.io key\n")
+		os.Exit(1)
+	}
+
+	libhConf := libhoney.Config{
+		WriteKey: honeyWriteKey,
+		Dataset:  name + "-service",
+	}
+	libhoney.Init(libhConf)
+	defer libhoney.Close()
+
 	server := servers.NewBackendServer(name)
 
 	signalChan := make(chan os.Signal, 1)

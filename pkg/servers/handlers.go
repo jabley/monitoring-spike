@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/honeycombio/libhoney-go"
 )
 
 type key int
 
 const (
-	requestIDKey key = 0
+	requestIDKey   key = 0
+	honeycombEvent key = 1
 )
 
 // KeyValue makes the ENV vars into a first-class data structure
@@ -49,7 +52,15 @@ func requestIDFromContext(ctx context.Context) string {
 
 func serviceTime(name string, next http.Handler) http.Handler {
 	record := func(r *http.Request, duration time.Duration) {
-		// TODO(jabley): send data to a metrics gathering service
+		ev := eventFromContext(r.Context())
+		ev.AddField("app", "monitoring-spike")
+		ev.AddField("env", "dev")
+		ev.AddField("url", r.URL.Path)
+		ev.AddField("request_id", requestIDFromContext(r.Context()))
+		ev.AddField("service_time_ns", duration)
+		if err := ev.Send(); err != nil {
+			fmt.Printf("Problem sending to honeycomb: %#v\n", err)
+		}
 	}
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -67,8 +78,11 @@ func instrument(next http.Handler) http.Handler {
 }
 
 func newInstrumentedContext(ctx context.Context) context.Context {
-	// TODO(jabley): add metrics gathering objects to the request context.
-	return ctx
+	return context.WithValue(ctx, honeycombEvent, libhoney.NewEvent())
+}
+
+func eventFromContext(ctx context.Context) *libhoney.Event {
+	return ctx.Value(honeycombEvent).(*libhoney.Event)
 }
 
 func mainHandler(client *http.Client, backends []Backend) http.Handler {
@@ -79,7 +93,10 @@ func mainHandler(client *http.Client, backends []Backend) http.Handler {
 
 // measureResponse handles [logging|generating an event for] the response time of a given backend
 func measureResponse(ctx context.Context, URL, path string, b Backend, duration time.Duration, err error) {
-	// TOOD(jabley): appropriately handle this for each metrics collection service
+	ev := eventFromContext(ctx)
+	ev.AddField(b.Name+"_response_dur_ns", duration)
+	ev.AddField(b.Name+"_url", URL)
+	ev.AddField(b.Name+"_success", err == nil)
 }
 
 func process(client *http.Client, path string, backends []Backend, rw http.ResponseWriter, r *http.Request) {

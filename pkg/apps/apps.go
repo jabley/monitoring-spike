@@ -1,9 +1,12 @@
 package apps
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 	"time"
+
+	libhoney "github.com/honeycombio/libhoney-go"
 )
 
 // GetDefaultConfig returns the value from the environment, or the provided fallback if the environment is empty.
@@ -21,6 +24,13 @@ func MonitorProcess(name string, quit chan struct{}) {
 		select {
 		case <-ticker.C:
 			// TOOD(jabley): send process memory and other gauges to metrics collection service
+			m := GetMemStats()
+			ev := libhoney.NewEvent()
+			ev.Dataset = name + "-memory-stats"
+			ev.AddField("memory_size", m.Alloc)
+			if err := ev.Send(); err != nil {
+				fmt.Printf("Problem sending to honeycomb: %#v\n", err)
+			}
 		case <-quit:
 			ticker.Stop()
 			return
