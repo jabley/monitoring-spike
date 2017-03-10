@@ -1,6 +1,7 @@
-A silly spike to try to understand what different monitoring options give us.
+A spike to try to understand what different monitoring options give us.
 
-You almost certainly need something different.
+**You almost certainly need something different. Please stop and understand your
+context.**
 
 However, the premise is simple:
 
@@ -36,7 +37,6 @@ You'll need to run the server. You can do this in a couple of ways:
 $ make
 $ env FOO=your-api-key ./monitoring-spike &
 ```
-
 1. Using Docker
 ```sh
 $ make dockerise
@@ -51,3 +51,7 @@ $ make report
 
 This will run `vegeta` and hopefully create some metrics in the system that
 you're evaluating.
+
+## PS
+
+Look at the branches!
