@@ -8,12 +8,15 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	cgm "github.com/circonus-labs/circonus-gometrics"
 )
 
 type key int
 
 const (
 	requestIDKey key = 0
+	metricsKey   key = 1
 )
 
 // KeyValue makes the ENV vars into a first-class data structure
@@ -48,27 +51,30 @@ func requestIDFromContext(ctx context.Context) string {
 }
 
 func serviceTime(name string, next http.Handler) http.Handler {
-	record := func(r *http.Request, duration time.Duration) {
-		// TODO(jabley): send data to a metrics gathering service
+	record := func(r *http.Request, duration time.Duration, metrics *cgm.CirconusMetrics) {
+		metrics.RecordValue("service_time_ns", float64(duration))
 	}
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		metrics := r.Context().Value(metricsKey).(*cgm.CirconusMetrics)
+
+		metrics.Increment("queries") // a counter for the queries
+
 		start := time.Now()
-		defer record(r, time.Now().Sub(start))
+		defer record(r, time.Now().Sub(start), metrics)
 		next.ServeHTTP(rw, r)
 	})
 }
 
-func instrument(next http.Handler) http.Handler {
+func instrument(next http.Handler, metrics *cgm.CirconusMetrics) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		ctx := newInstrumentedContext(r.Context())
+		ctx := newInstrumentedContext(r.Context(), metrics)
 		next.ServeHTTP(rw, r.WithContext(ctx))
 	})
 }
 
-func newInstrumentedContext(ctx context.Context) context.Context {
-	// TODO(jabley): add metrics gathering objects to the request context.
-	return ctx
+func newInstrumentedContext(ctx context.Context, metrics *cgm.CirconusMetrics) context.Context {
+	return context.WithValue(ctx, metricsKey, metrics)
 }
 
 func mainHandler(client *http.Client, backends []Backend) http.Handler {
@@ -79,7 +85,14 @@ func mainHandler(client *http.Client, backends []Backend) http.Handler {
 
 // measureResponse handles [logging|generating an event for] the response time of a given backend
 func measureResponse(ctx context.Context, URL, path string, b Backend, duration time.Duration, err error) {
-	// TOOD(jabley): appropriately handle this for each metrics collection service
+	metrics := ctx.Value(metricsKey).(*cgm.CirconusMetrics)
+	metrics.RecordValue("response_time_ns", float64(duration))
+
+	if err == nil {
+		metrics.Increment("queries_success")
+	} else {
+		metrics.Increment("queries_error")
+	}
 }
 
 func process(client *http.Client, path string, backends []Backend, rw http.ResponseWriter, r *http.Request) {

@@ -23,13 +23,15 @@ func main() {
 
 	backends := servers.NewBackends(errorChan)
 
-	srv := servers.NewFrontendServer(backends)
+	metrics := apps.NewMetrics("")
+
+	srv := servers.NewFrontendServer(backends, metrics)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	quit := make(chan struct{})
-	go apps.MonitorProcess("frontend", quit)
+	go apps.MonitorProcess("frontend", quit, metrics)
 
 	go servers.ListenAndServe(port, srv, errorChan)
 
@@ -46,6 +48,7 @@ func main() {
 			defer cancel()
 			srv.Shutdown(ctx)
 			quit <- struct{}{}
+			metrics.Flush()
 			os.Exit(0)
 		}
 	}

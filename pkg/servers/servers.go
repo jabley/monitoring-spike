@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/http"
 	"time"
+
+	cgm "github.com/circonus-labs/circonus-gometrics"
 )
 
 const (
@@ -22,29 +24,29 @@ const (
 )
 
 // NewFrontendServer creates a new frontend server
-func NewFrontendServer(backends []Backend) *http.Server {
+func NewFrontendServer(backends []Backend, metrics *cgm.CirconusMetrics) *http.Server {
 	tr := &http.Transport{
 		ResponseHeaderTimeout: 2 * time.Second,
 	}
 	client := &http.Client{Transport: tr}
 
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", requestID(instrument(serviceTime("frontend", mainHandler(client, filterBackends(backends, homePageServices))))))
-	serveMux.Handle("/products", requestID(instrument(serviceTime("frontend", productListing(client, filterBackends(backends, productListingServices))))))
-	serveMux.Handle("/products/", requestID(instrument(serviceTime("frontend", productDetail(client, filterBackends(backends, productDetailServices))))))
-	serveMux.Handle("/categories", requestID(instrument(serviceTime("frontend", categoryListing(client, filterBackends(backends, categoryListingServices))))))
-	serveMux.Handle("/categories/", requestID(instrument(serviceTime("frontend", categoryDetail(client, filterBackends(backends, categoryDetailServices))))))
-	serveMux.Handle("/search", requestID(instrument(serviceTime("frontend", search(client, filterBackends(backends, searchServices))))))
-	serveMux.Handle("/account", requestID(instrument(serviceTime("frontend", account(client, filterBackends(backends, accountServices))))))
-	serveMux.Handle("/checkout", requestID(instrument(serviceTime("frontend", checkout(client, filterBackends(backends, checkoutServices))))))
+	serveMux.Handle("/", requestID(instrument(serviceTime("frontend", mainHandler(client, filterBackends(backends, homePageServices))), metrics)))
+	serveMux.Handle("/products", requestID(instrument(serviceTime("frontend", productListing(client, filterBackends(backends, productListingServices))), metrics)))
+	serveMux.Handle("/products/", requestID(instrument(serviceTime("frontend", productDetail(client, filterBackends(backends, productDetailServices))), metrics)))
+	serveMux.Handle("/categories", requestID(instrument(serviceTime("frontend", categoryListing(client, filterBackends(backends, categoryListingServices))), metrics)))
+	serveMux.Handle("/categories/", requestID(instrument(serviceTime("frontend", categoryDetail(client, filterBackends(backends, categoryDetailServices))), metrics)))
+	serveMux.Handle("/search", requestID(instrument(serviceTime("frontend", search(client, filterBackends(backends, searchServices))), metrics)))
+	serveMux.Handle("/account", requestID(instrument(serviceTime("frontend", account(client, filterBackends(backends, accountServices))), metrics)))
+	serveMux.Handle("/checkout", requestID(instrument(serviceTime("frontend", checkout(client, filterBackends(backends, checkoutServices))), metrics)))
 
 	return NewServer(serveMux)
 }
 
 // NewBackendServer returns a new backend server
-func NewBackendServer(name string) *http.Server {
+func NewBackendServer(name string, metrics *cgm.CirconusMetrics) *http.Server {
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", requestID(instrument(serviceTime(name, unreliableHandler(rand.Intn(5)+1, name)))))
+	serveMux.Handle("/", requestID(instrument(serviceTime(name, unreliableHandler(rand.Intn(5)+1, name)), metrics)))
 	return NewServer(serveMux)
 }
 

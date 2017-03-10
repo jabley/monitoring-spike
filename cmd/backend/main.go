@@ -16,13 +16,16 @@ import (
 func main() {
 	name := apps.GetDefaultConfig("NAME", "")
 	port := apps.GetDefaultConfig("PORT", "")
-	server := servers.NewBackendServer(name)
+
+	metrics := apps.NewMetrics(name)
+
+	server := servers.NewBackendServer(name, metrics)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	quit := make(chan struct{})
-	go apps.MonitorProcess(name, quit)
+	go apps.MonitorProcess(name, quit, metrics)
 
 	errorChan := make(chan error, 1)
 
@@ -41,6 +44,7 @@ func main() {
 			defer cancel()
 			server.Shutdown(ctx)
 			quit <- struct{}{}
+			metrics.Flush()
 			os.Exit(0)
 		}
 	}
