@@ -32,7 +32,7 @@ func requestIDFromContext(ctx context.Context) string {
 	return ctx.Value(requestIDKey).(string)
 }
 
-func serviceTime(next http.Handler) http.Handler {
+func serviceTime(name string, next http.Handler) http.Handler {
 	record := func(r *http.Request, duration time.Duration) {
 		// TODO(jabley): send data to a metrics gathering service
 	}

@@ -15,14 +15,14 @@ func newMainServer(backends []backend) *http.Server {
 	client := &http.Client{Transport: tr}
 
 	serveMux := http.NewServeMux()
-	serveMux.Handle("/", requestID(instrument(serviceTime(mainHandler(client, filterBackends(backends, homePageServices))))))
-	serveMux.Handle("/products", requestID(instrument(serviceTime(productListing(client, filterBackends(backends, productListingServices))))))
-	serveMux.Handle("/products/", requestID(instrument(serviceTime(productDetail(client, filterBackends(backends, productDetailServices))))))
-	serveMux.Handle("/categories", requestID(instrument(serviceTime(categoryListing(client, filterBackends(backends, categoryListingServices))))))
-	serveMux.Handle("/categories/", requestID(instrument(serviceTime(categoryDetail(client, filterBackends(backends, categoryDetailServices))))))
-	serveMux.Handle("/search", requestID(instrument(serviceTime(search(client, filterBackends(backends, searchServices))))))
-	serveMux.Handle("/account", requestID(instrument(serviceTime(account(client, filterBackends(backends, accountServices))))))
-	serveMux.Handle("/checkout", requestID(instrument(serviceTime(checkout(client, filterBackends(backends, checkoutServices))))))
+	serveMux.Handle("/", requestID(instrument(serviceTime("frontend", mainHandler(client, filterBackends(backends, homePageServices))))))
+	serveMux.Handle("/products", requestID(instrument(serviceTime("frontend", productListing(client, filterBackends(backends, productListingServices))))))
+	serveMux.Handle("/products/", requestID(instrument(serviceTime("frontend", productDetail(client, filterBackends(backends, productDetailServices))))))
+	serveMux.Handle("/categories", requestID(instrument(serviceTime("frontend", categoryListing(client, filterBackends(backends, categoryListingServices))))))
+	serveMux.Handle("/categories/", requestID(instrument(serviceTime("frontend", categoryDetail(client, filterBackends(backends, categoryDetailServices))))))
+	serveMux.Handle("/search", requestID(instrument(serviceTime("frontend", search(client, filterBackends(backends, searchServices))))))
+	serveMux.Handle("/account", requestID(instrument(serviceTime("frontend", account(client, filterBackends(backends, accountServices))))))
+	serveMux.Handle("/checkout", requestID(instrument(serviceTime("frontend", checkout(client, filterBackends(backends, checkoutServices))))))
 
 	return newServer(serveMux)
 }
@@ -44,7 +44,8 @@ func newBackends(errorChan chan<- error) []backend {
 
 	for i := range backends {
 		serveMux := http.NewServeMux()
-		serveMux.Handle("/", requestID(instrument(serviceTime(unreliableHandler(rand.Intn(5)+1)))))
+		name := backendName(i)
+		serveMux.Handle("/", requestID(instrument(serviceTime(name, unreliableHandler(rand.Intn(5)+1)))))
 		server := newServer(serveMux)
 		listener, err := newListener("0")
 
@@ -59,7 +60,7 @@ func newBackends(errorChan chan<- error) []backend {
 		backends[i] = backend{
 			server:  server,
 			address: listener.Addr().String(),
-			name:    backendName(i),
+			name:    name,
 		}
 	}
 
