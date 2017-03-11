@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 	"time"
 )
@@ -242,6 +243,9 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
+	quit := make(chan struct{})
+	go monitorProcess(quit)
+
 	go listenAndServe(port, srv, errorChan)
 
 	for {
@@ -259,6 +263,7 @@ func main() {
 			for _, b := range backends {
 				b.server.Shutdown(ctx)
 			}
+			quit <- struct{}{}
 			os.Exit(0)
 		}
 	}
@@ -290,4 +295,24 @@ func generateRandomID() string {
 	b[6] = (b[6] & 0xF) | (byte(4) << 4)
 	b[8] = (b[8] | 0x40) & 0x7F
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+func monitorProcess(quit chan struct{}) {
+	ticker := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			// TOOD(jabley): send process memory and other gauges to metrics collection service
+		case <-quit:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+// getMemStats returns a non-nill *runtime.MemStats. This is a mildly expensive call, so don't hammer it.
+func getMemStats() *runtime.MemStats {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return &m
 }
