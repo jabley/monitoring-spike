@@ -1,5 +1,7 @@
 .PHONY: build build-linux clean dockerise lint attack report
 
+DURATION=10m
+
 build: -imports
 	go build -o monitoring-spike .
 
@@ -24,7 +26,7 @@ dockerise:
 	docker run --rm jabley/monitoring-spike-builder | docker build -t jabley/monitoring-spike -f Dockerfile.run -
 
 attack:
-	vegeta attack -targets=targets.txt -duration=60s -rate=50 > results.bin
+	vegeta attack -targets=targets.txt -duration=$(DURATION) -rate=50 > results.bin
 
 report: attack
 	cat results.bin | vegeta report
