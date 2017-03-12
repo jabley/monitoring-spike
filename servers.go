@@ -31,7 +31,7 @@ func filterBackends(backends []backend, desired map[string]bool) []backend {
 	var res []backend
 
 	for _, b := range backends {
-		if _, ok := desired[b.name]; ok {
+		if desired[b.name] {
 			res = append(res, b)
 		}
 	}
