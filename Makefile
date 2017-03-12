@@ -9,7 +9,7 @@ build-linux: -imports
 	env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o monitoring-spike
 
 clean:
-	rm monitoring-spike
+	rm monitoring-spike ||:
 
 -deps:
 	go get golang.org/x/tools/cmd/goimports
