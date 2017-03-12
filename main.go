@@ -20,16 +20,16 @@ type key int
 const (
 	requestIDKey key = 0
 
-	navigationService = "Navigation"
-	contentService    = "Content"
-	searchService     = "Search"
-	productService    = "Product"
-	priceService      = "Price"
-	shipppingService  = "Shipping"
-	identityService   = "Identity"
-	customerService   = "Customer"
-	basketService     = "Basket"
-	orderService      = "Order"
+	navigationService = "navigation"
+	contentService    = "content"
+	searchService     = "search"
+	productService    = "product"
+	priceService      = "price"
+	shipppingService  = "shipping"
+	identityService   = "identity"
+	customerService   = "customer"
+	basketService     = "basket"
+	orderService      = "order"
 )
 
 const (
