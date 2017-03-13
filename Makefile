@@ -1,12 +1,15 @@
-.PHONY: build build-linux clean dockerise lint attack report
+.PHONY: attack clean darwin dockerise linux lint report
 
 DURATION=10m
 
-build: -imports
-	go build -o monitoring-spike .
+darwin: -prep
+	env GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o monitoring-spike .
 
-build-linux: -imports
+linux: -prep
 	env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o monitoring-spike
+
+native: -prep
+	go build -o monitoring-spike .
 
 clean:
 	rm monitoring-spike ||:
@@ -16,6 +19,8 @@ clean:
 
 -imports: -deps
 	goimports -w .
+
+-prep: -imports lint
 
 lint:
 	golint .
