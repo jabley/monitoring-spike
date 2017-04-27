@@ -1,4 +1,4 @@
-package main
+package servers
 
 import (
 	"fmt"
@@ -8,7 +8,21 @@ import (
 	"time"
 )
 
-func newMainServer(backends []backend) *http.Server {
+const (
+	navigationService = "navigation"
+	contentService    = "content"
+	searchService     = "search"
+	productService    = "product"
+	priceService      = "price"
+	shipppingService  = "shipping"
+	identityService   = "identity"
+	customerService   = "customer"
+	basketService     = "basket"
+	orderService      = "order"
+)
+
+// NewFrontendServer creates a new frontend server
+func NewFrontendServer(backends []Backend) *http.Server {
 	tr := &http.Transport{
 		ResponseHeaderTimeout: 2 * time.Second,
 	}
@@ -24,14 +38,21 @@ func newMainServer(backends []backend) *http.Server {
 	serveMux.Handle("/account", requestID(instrument(serviceTime("frontend", account(client, filterBackends(backends, accountServices))))))
 	serveMux.Handle("/checkout", requestID(instrument(serviceTime("frontend", checkout(client, filterBackends(backends, checkoutServices))))))
 
-	return newServer(serveMux)
+	return NewServer(serveMux)
 }
 
-func filterBackends(backends []backend, desired map[string]bool) []backend {
-	var res []backend
+// NewBackendServer returns a new backend server
+func NewBackendServer(name string) *http.Server {
+	serveMux := http.NewServeMux()
+	serveMux.Handle("/", requestID(instrument(serviceTime(name, unreliableHandler(rand.Intn(5)+1, name)))))
+	return NewServer(serveMux)
+}
+
+func filterBackends(backends []Backend, desired map[string]bool) []Backend {
+	var res []Backend
 
 	for _, b := range backends {
-		if desired[b.name] {
+		if desired[b.Name] {
 			res = append(res, b)
 		}
 	}
@@ -39,28 +60,16 @@ func filterBackends(backends []backend, desired map[string]bool) []backend {
 	return res
 }
 
-func newBackends(errorChan chan<- error) []backend {
-	backends := make([]backend, 10)
+// NewBackends creates new backends
+func NewBackends(errorChan chan<- error) []Backend {
+	backends := make([]Backend, 10)
 
 	for i := range backends {
-		serveMux := http.NewServeMux()
 		name := backendName(i)
-		serveMux.Handle("/", requestID(instrument(serviceTime(name, unreliableHandler(rand.Intn(5)+1)))))
-		server := newServer(serveMux)
-		listener, err := newListener("0")
 
-		if err != nil {
-			panic(err)
-		}
-
-		go func() {
-			errorChan <- server.Serve(listener)
-		}()
-
-		backends[i] = backend{
-			server:  server,
-			address: listener.Addr().String(),
-			name:    name,
+		backends[i] = Backend{
+			Name:    name,
+			Address: name + ":8080",
 		}
 	}
 
@@ -72,15 +81,39 @@ func backendName(i int) string {
 	return fmt.Sprintf("%s", backendServiceNames[i%nameLen])
 }
 
-func newListener(port string) (net.Listener, error) {
+// NewListener creates a new listener on the specified port.
+func NewListener(port string) (net.Listener, error) {
 	return net.Listen("tcp", "0.0.0.0:"+port)
 }
 
-func newServer(serveMux http.Handler) *http.Server {
+// ListenAndServe listens on the specified port.
+func ListenAndServe(port string, server *http.Server, errorChan chan<- error) {
+	listener, err := NewListener(port)
+	if err != nil {
+		errorChan <- err
+		return
+	}
+	errorChan <- server.Serve(listener)
+}
+
+// NewServer creates a new http.Server
+func NewServer(serveMux http.Handler) *http.Server {
 	return &http.Server{
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 		Handler:      serveMux,
 	}
+}
+
+func generateRandomID() string {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	// Horrible magic numbers due to UUID spec in RFC4122
+	b[6] = (b[6] & 0xF) | (byte(4) << 4)
+	b[8] = (b[8] | 0x40) & 0x7F
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }

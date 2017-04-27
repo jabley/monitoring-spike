@@ -1,0 +1,76 @@
+version: '2'
+services:
+  frontend:
+    image: "jabley/frontend-amd64:1.0.0"
+    ports:
+     - 8080:8080
+  basket:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8081:8080
+    environment:
+      NAME: basket
+      PORT: 8080
+  content:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8082:8080
+    environment:
+      NAME: content
+      PORT: 8080
+  customer:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8083:8080
+    environment:
+      NAME: customer
+      PORT: 8080
+  identity:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8084:8080
+    environment:
+      NAME: identity
+      PORT: 8080
+  navigation:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8085:8080
+    environment:
+      NAME: navigation
+      PORT: 8080
+  price:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8086:8080
+    environment:
+      NAME: price
+      PORT: 8080
+  product:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8087:8080
+    environment:
+      NAME: basket
+      PORT: 8080
+  search:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8088:8080
+    environment:
+      NAME: basket
+      PORT: 8080
+  shipping:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8089:8080
+    environment:
+      NAME: basket
+      PORT: 8080
+  order:
+    image: "jabley/backend-amd64:1.0.0"
+    ports:
+     - 8090:8080
+    environment:
+      NAME: basket
+      PORT: 8080

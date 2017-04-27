@@ -18,15 +18,25 @@ doing that, it should capture:
 
 ## Dependencies
 
-- This is written in Go. Either you'll need Go, or Docker
+- This is written in Go.
 - It uses Make for building things. That might be handy
-- [goimports](https://godoc.org/golang.org/x/tools/cmd/goimports) is used to format and rearrange imports – `go get golang.org/x/tools/cmd/goimports`
+- It uses Docker Compose to run the applications
 - [vegeta](https://github.com/tsenart/vegeta) is used for sending a load of traffic to the server – `brew install vegeta` or similar
 
 ## Running it
 
-You'll want to run the server, and throw some traffic at it so that some metrics
-are created in the system you're playing with.
+You'll want to run the applications, and throw some traffic at it so that some
+metrics are created in the system you're playing with.
+
+```sh
+$ DURATION=30s make report
+```
+
+This will:
+
+* use Docker to build everything
+* use locally installed `vegeta` to send some traffic to the applications for 30 seconds
+* print out a report of how the frontend behaved
 
 ### Running the server
 
@@ -39,18 +49,9 @@ $ env FOO=your-api-key ./monitoring-spike &
 ```
 1. Using Docker
 ```sh
-$ make dockerise
+$ make
 $ docker run -p 8080:8080 -e FOO=your-api-key -itd jabley/monitoring-spike
 ```
-
-### Generating some load
-
-```sh
-$ make report
-```
-
-This will run `vegeta` and hopefully create some metrics in the system that
-you're evaluating.
 
 ## PS
 

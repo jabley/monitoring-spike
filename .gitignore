@@ -1,2 +1,7 @@
 monitoring-spike
 results.bin
+/bin
+/.go
+/.push-*
+/.container-*
+/.dockerfile-*
