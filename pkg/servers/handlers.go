@@ -1,4 +1,4 @@
-package main
+package servers
 
 import (
 	"context"
@@ -9,6 +9,21 @@ import (
 	"sync"
 	"time"
 )
+
+type key int
+
+const (
+	requestIDKey key = 0
+)
+
+// KeyValue makes the ENV vars into a first-class data structure
+type KeyValue struct {
+	Key   string
+	Value string
+}
+
+// KeyValues is a shorter way of referencing an array
+type KeyValues []*KeyValue
 
 func requestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -56,18 +71,18 @@ func newInstrumentedContext(ctx context.Context) context.Context {
 	return ctx
 }
 
-func mainHandler(client *http.Client, backends []backend) http.Handler {
+func mainHandler(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/home", backends, rw, r)
 	})
 }
 
 // measureResponse handles [logging|generating an event for] the response time of a given backend
-func measureResponse(ctx context.Context, URL, path string, b backend, duration time.Duration, err error) {
+func measureResponse(ctx context.Context, URL, path string, b Backend, duration time.Duration, err error) {
 	// TOOD(jabley): appropriately handle this for each metrics collection service
 }
 
-func process(client *http.Client, path string, backends []backend, rw http.ResponseWriter, r *http.Request) {
+func process(client *http.Client, path string, backends []Backend, rw http.ResponseWriter, r *http.Request) {
 	results := make(chan KeyValue, len(backends))
 
 	var wg sync.WaitGroup
@@ -75,7 +90,7 @@ func process(client *http.Client, path string, backends []backend, rw http.Respo
 	for _, b := range backends {
 		wg.Add(1)
 
-		go func(b backend, results chan<- KeyValue) {
+		go func(b Backend, results chan<- KeyValue) {
 			defer wg.Done()
 			fetch(r.Context(), client, path, b, results)
 		}(b, results)
@@ -96,58 +111,58 @@ func process(client *http.Client, path string, backends []backend, rw http.Respo
 	}
 }
 
-func fetch(ctx context.Context, client *http.Client, path string, b backend, results chan<- KeyValue) {
-	URL := "http://" + b.address + path
+func fetch(ctx context.Context, client *http.Client, path string, b Backend, results chan<- KeyValue) {
+	URL := "http://" + b.Address + path
 	start := time.Now()
 	res, err := client.Get(URL)
 
 	if err != nil {
 		defer measureResponse(ctx, URL, path, b, time.Now().Sub(start), err)
-		results <- KeyValue{b.name, err.Error()}
+		results <- KeyValue{b.Name, err.Error()}
 	} else {
 		defer res.Body.Close()
 		defer measureResponse(ctx, URL, path, b, time.Now().Sub(start), nil)
-		results <- KeyValue{b.name, res.Status}
+		results <- KeyValue{b.Name, res.Status}
 	}
 }
 
-func productListing(client *http.Client, backends []backend) http.Handler {
+func productListing(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/products", backends, rw, r)
 	})
 }
 
-func productDetail(client *http.Client, backends []backend) http.Handler {
+func productDetail(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/products/"+hash(r.URL.Path), backends, rw, r)
 	})
 }
 
-func categoryListing(client *http.Client, backends []backend) http.Handler {
+func categoryListing(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/categories", backends, rw, r)
 	})
 }
 
-func categoryDetail(client *http.Client, backends []backend) http.Handler {
+func categoryDetail(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/categories/"+hash(r.URL.Path), backends, rw, r)
 	})
 }
 
-func search(client *http.Client, backends []backend) http.Handler {
+func search(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/search?q="+hash(r.URL.Path), backends, rw, r)
 	})
 }
 
-func account(client *http.Client, backends []backend) http.Handler {
+func account(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/account", backends, rw, r)
 	})
 }
 
-func checkout(client *http.Client, backends []backend) http.Handler {
+func checkout(client *http.Client, backends []Backend) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		process(client, "/checkout", backends, rw, r)
 	})
@@ -179,9 +194,10 @@ func predictableResponseTime(r *http.Request) {
 	time.Sleep(time.Duration(time.Duration(rand.Intn(20)) * time.Millisecond))
 }
 
-func unreliableHandler(percentageFailures int) http.Handler {
+func unreliableHandler(percentageFailures int, name string) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		predictableResponseTime(r)
+		rw.Header().Add("Content-Type", "application/json")
 		if rand.Intn(100) < percentageFailures {
 			rw.WriteHeader(http.StatusBadRequest)
 			rw.Write([]byte(`{
@@ -198,7 +214,7 @@ func unreliableHandler(percentageFailures int) http.Handler {
 			rw.WriteHeader(http.StatusOK)
 			rw.Write([]byte(`{
   "data": [{
-    "type": "articles",
+    "type": "` + name + `",
     "id": "1",
     "attributes": {
       "title": "JSON API paints my bikeshed!",
