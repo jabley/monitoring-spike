@@ -2,6 +2,7 @@ package apps
 
 import (
 	"os"
+	"runtime"
 	"time"
 )
 
@@ -14,7 +15,7 @@ func GetDefaultConfig(name, fallback string) string {
 }
 
 // MonitorProcess is used to capture periodic process metrics
-func MonitorProcess(quit chan struct{}) {
+func MonitorProcess(name string, quit chan struct{}) {
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
@@ -25,4 +26,11 @@ func MonitorProcess(quit chan struct{}) {
 			return
 		}
 	}
+}
+
+// GetMemStats returns a non-nill *runtime.MemStats. This is a mildly expensive call, so don't hammer it.
+func GetMemStats() *runtime.MemStats {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return &m
 }

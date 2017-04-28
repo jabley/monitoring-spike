@@ -22,7 +22,7 @@ func main() {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
 	quit := make(chan struct{})
-	go apps.MonitorProcess(quit)
+	go apps.MonitorProcess(name, quit)
 
 	errorChan := make(chan error, 1)
 
