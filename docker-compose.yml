@@ -4,10 +4,25 @@ services:
     image: "jabley/frontend-amd64:1.0.0"
     ports:
      - 8080:8080
+    env_file:
+      .env
+    links:
+     - basket
+     - content
+     - customer
+     - identity
+     - navigation
+     - price
+     - product
+     - search
+     - shipping
+     - order
   basket:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8081:8080
+    env_file:
+      .env
     environment:
       NAME: basket
       PORT: 8080
@@ -15,6 +30,8 @@ services:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8082:8080
+    env_file:
+      .env
     environment:
       NAME: content
       PORT: 8080
@@ -22,6 +39,8 @@ services:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8083:8080
+    env_file:
+      .env
     environment:
       NAME: customer
       PORT: 8080
@@ -29,6 +48,8 @@ services:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8084:8080
+    env_file:
+      .env
     environment:
       NAME: identity
       PORT: 8080
@@ -36,6 +57,8 @@ services:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8085:8080
+    env_file:
+      .env
     environment:
       NAME: navigation
       PORT: 8080
@@ -43,6 +66,8 @@ services:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8086:8080
+    env_file:
+      .env
     environment:
       NAME: price
       PORT: 8080
@@ -50,27 +75,35 @@ services:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8087:8080
+    env_file:
+      .env
     environment:
-      NAME: basket
+      NAME: product
       PORT: 8080
   search:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8088:8080
+    env_file:
+      .env
     environment:
-      NAME: basket
+      NAME: search
       PORT: 8080
   shipping:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8089:8080
+    env_file:
+      .env
     environment:
-      NAME: basket
+      NAME: shipping
       PORT: 8080
   order:
     image: "jabley/backend-amd64:1.0.0"
     ports:
      - 8090:8080
+    env_file:
+      .env
     environment:
-      NAME: basket
+      NAME: order
       PORT: 8080
