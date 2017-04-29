@@ -38,21 +38,6 @@ This will:
 * use locally installed `vegeta` to send some traffic to the applications for 30 seconds
 * print out a report of how the frontend behaved
 
-### Running the server
-
-You'll need to run the server. You can do this in a couple of ways:
-
-1. Using Go:
-```sh
-$ make
-$ env FOO=your-api-key ./monitoring-spike &
-```
-1. Using Docker
-```sh
-$ make
-$ docker run -p 8080:8080 -e FOO=your-api-key -itd jabley/monitoring-spike
-```
-
 ## PS
 
 Look at the branches!
