@@ -176,7 +176,7 @@ run: container
 
 stop:
 	@docker-compose down
-	
+
 attack: run
 	vegeta attack -targets=targets.txt -duration=$(DURATION) -rate=50 > results.bin
 
