@@ -1,9 +1,0 @@
-FROM golang:alpine
-RUN apk update && \
-    apk add --no-cache make git
-RUN mkdir /app
-ADD Dockerfile.run *.go Makefile /app/
-WORKDIR /app
-RUN make build-linux
-# Output a tarball which can be piped into `docker build -f Dockerfile.run -`
-CMD tar -cf - -C /app Dockerfile.run -C /app monitoring-spike
