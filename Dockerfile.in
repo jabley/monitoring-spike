@@ -16,6 +16,9 @@ FROM ARG_FROM
 
 MAINTAINER James Abley <james.abley@gmail.com>
 
+RUN apk update && \
+    apk add --no-cache ca-certificates
+
 ADD bin/ARG_ARCH/ARG_BIN /ARG_BIN
 
 USER nobody:nobody
