@@ -16,7 +16,8 @@ import (
 func main() {
 	name := apps.GetDefaultConfig("NAME", "")
 	port := apps.GetDefaultConfig("PORT", "")
-	server := servers.NewBackendServer(name)
+	logger := apps.NewLogger()
+	server := servers.NewBackendServer(name, logger)
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
@@ -35,7 +36,7 @@ func main() {
 				log.Fatal(err)
 			}
 		case s := <-signalChan:
-			log.Println(fmt.Sprintf("Captured %v. Exiting ...", s))
+			logger.Info(fmt.Sprintf("Captured %v. Exiting ...", s))
 			d := time.Now().Add(1 * time.Second)
 			ctx, cancel := context.WithDeadline(context.Background(), d)
 			defer cancel()

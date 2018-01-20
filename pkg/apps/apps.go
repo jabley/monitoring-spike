@@ -4,6 +4,9 @@ import (
 	"os"
 	"runtime"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // GetDefaultConfig returns the value from the environment, or the provided fallback if the environment is empty.
@@ -33,4 +36,15 @@ func GetMemStats() *runtime.MemStats {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	return &m
+}
+
+// NewLogger returns a new *zap.Logger
+func NewLogger() *zap.Logger {
+	config := zap.NewProductionConfig()
+	config.EncoderConfig.EncodeDuration = zapcore.NanosDurationEncoder
+	logger, err := config.Build()
+	if err != nil {
+		panic(err)
+	}
+	return logger
 }

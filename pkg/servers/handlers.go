@@ -8,13 +8,59 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type key int
 
 const (
-	requestIDKey key = 0
+	requestIDKey          key = 0
+	appLogger             key = 1
+	requestLoggingContext key = 2
 )
+
+type backingServiceMetric struct {
+	responseDuration time.Duration
+	URL              string
+	success          bool
+}
+
+type loggingContext struct {
+	mu             sync.Mutex
+	backendMetrics map[string]*backingServiceMetric
+}
+
+func (lc *loggingContext) AddBackingServiceMetric(name string, duration time.Duration, URL string, success bool) {
+	lc.mu.Lock()
+	defer lc.mu.Unlock()
+	if lc.backendMetrics == nil {
+		lc.backendMetrics = make(map[string]*backingServiceMetric)
+	}
+	if _, ok := lc.backendMetrics[name]; ok {
+		panic("duplicate key: " + name)
+	}
+	lc.backendMetrics[name] = &backingServiceMetric{
+		responseDuration: duration,
+		URL:              URL,
+		success:          success,
+	}
+}
+
+func (lc *loggingContext) backingServiceFields() []zapcore.Field {
+	res := make([]zapcore.Field, len(lc.backendMetrics)*3)
+
+	var i int
+	for k, v := range lc.backendMetrics {
+		res[i] = zap.Duration(k+"_response_dur_ns", v.responseDuration)
+		res[i+1] = zap.String(k+"_url", v.URL)
+		res[i+2] = zap.Bool(k+"_success", v.success)
+		i += 3
+	}
+
+	return res
+}
 
 // KeyValue makes the ENV vars into a first-class data structure
 type KeyValue struct {
@@ -49,7 +95,20 @@ func requestIDFromContext(ctx context.Context) string {
 
 func serviceTime(name string, next http.Handler) http.Handler {
 	record := func(r *http.Request, duration time.Duration) {
-		// TODO(jabley): send data to a metrics gathering service
+		lc := loggingContextFromContext(r.Context())
+		logger := loggerFromContext(r.Context())
+		defer logger.Sync()
+		fields := []zapcore.Field{
+			zap.String("app", "monitoring-spike"),
+			zap.String("env", "dev"),
+			zap.String("url", r.URL.Path),
+			zap.String("request_id", requestIDFromContext(r.Context())),
+			zap.Duration("service_time_ns", duration),
+		}
+		fields = append(fields, lc.backingServiceFields()...)
+		logger.Info("",
+			fields...,
+		)
 	}
 
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
@@ -59,16 +118,23 @@ func serviceTime(name string, next http.Handler) http.Handler {
 	})
 }
 
-func instrument(next http.Handler) http.Handler {
+func instrument(next http.Handler, logger *zap.Logger) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		ctx := newInstrumentedContext(r.Context())
+		ctx := newInstrumentedContext(r.Context(), logger)
 		next.ServeHTTP(rw, r.WithContext(ctx))
 	})
 }
 
-func newInstrumentedContext(ctx context.Context) context.Context {
-	// TODO(jabley): add metrics gathering objects to the request context.
-	return ctx
+func newInstrumentedContext(ctx context.Context, logger *zap.Logger) context.Context {
+	return context.WithValue(context.WithValue(ctx, requestLoggingContext, &loggingContext{}), appLogger, logger)
+}
+
+func loggingContextFromContext(ctx context.Context) *loggingContext {
+	return ctx.Value(requestLoggingContext).(*loggingContext)
+}
+
+func loggerFromContext(ctx context.Context) *zap.Logger {
+	return ctx.Value(appLogger).(*zap.Logger)
 }
 
 func mainHandler(client *http.Client, backends []Backend) http.Handler {
@@ -79,7 +145,8 @@ func mainHandler(client *http.Client, backends []Backend) http.Handler {
 
 // measureResponse handles [logging|generating an event for] the response time of a given backend
 func measureResponse(ctx context.Context, URL, path string, b Backend, duration time.Duration, err error) {
-	// TOOD(jabley): appropriately handle this for each metrics collection service
+	lc := loggingContextFromContext(ctx)
+	lc.AddBackingServiceMetric(b.Name, duration, URL, err == nil)
 }
 
 func process(client *http.Client, path string, backends []Backend, rw http.ResponseWriter, r *http.Request) {
