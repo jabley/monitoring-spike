@@ -46,7 +46,7 @@ endif
 BACKEND_IMAGE  := $(REGISTRY)/$(BACKEND)-$(ARCH)
 FRONTEND_IMAGE := $(REGISTRY)/$(FRONTEND)-$(ARCH)
 
-BUILD_IMAGE ?= golang:1.8-alpine
+BUILD_IMAGE ?= golang:1.14-alpine
 
 # If you want to build all binaries, see the 'all-build' rule.
 # If you want to build all containers, see the 'all-container' rule.
@@ -81,12 +81,13 @@ bin/$(ARCH)/%: build-dirs
 	    -v $$(pwd)/bin/$(ARCH):/go/bin/linux_$(ARCH)                       \
 	    -v $$(pwd)/.go/std/$(ARCH):/usr/local/go/pkg/linux_$(ARCH)_static  \
 	    -w /go/src/$(PKG)                                                  \
+	    -e XDG_CACHE_HOME=/tmp                                             \
 	    $(BUILD_IMAGE)                                                     \
 	    /bin/sh -c "                                                       \
 	        ARCH=$(ARCH)                                                   \
 	        VERSION=$(VERSION)                                             \
 	        PKG=$(PKG)                                                     \
-					BIN=$*																										     \
+	        BIN=$*														   \
 	        ./build/build.sh                                               \
 	    "
 
